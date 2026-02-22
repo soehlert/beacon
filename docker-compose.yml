@@ -1,0 +1,13 @@
+services:
+  beacon:
+    build: .
+    ports:
+      - "7867:7867"
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:7867/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3

@@ -43,6 +43,7 @@ class HomeAssistantService:
                     response.raise_for_status()
                     logger.info("HA Webhook alert sent successfully")
                     return {"status": "success", "platform": "homeassistant", "method": "webhook"}
+            except Exception as e:
                 if attempt < max_retries - 1:
                     logger.warning(f"HA Webhook attempt {attempt + 1} failed, retrying in {retry_delay}s: {e}")
                     await asyncio.sleep(retry_delay)
@@ -78,6 +79,7 @@ class HomeAssistantService:
                     response.raise_for_status()
                     logger.info(f"HA API alert sent to {self.entity}")
                     return {"status": "success", "platform": "homeassistant", "method": "api"}
+            except Exception as e:
                 if attempt < max_retries - 1:
                     logger.warning(f"HA API attempt {attempt + 1} failed, retrying in {retry_delay}s: {e}")
                     await asyncio.sleep(retry_delay)

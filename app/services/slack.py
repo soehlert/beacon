@@ -72,6 +72,7 @@ class SlackService:
                     logger.info(f"Slack Alert Sent: {msg_title or 'Info'} - {msg_text[:50]}...")
                     return {"status": "success", "platform": "slack"}
 
+            except Exception as e:
                 if attempt < max_retries - 1:
                     logger.warning(f"Slack attempt {attempt + 1} failed, retrying in {retry_delay}s: {e}")
                     await asyncio.sleep(retry_delay)

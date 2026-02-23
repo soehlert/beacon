@@ -34,28 +34,29 @@ async def get_peer_urls():
     try:
         # This will return all replica IPs for the service name in a Docker network
         # e.g., 'beacon' -> ['172.18.0.2', '172.18.0.3']
-        infos = socket.getaddrinfo(settings.beacon_service_name, settings.app_port)
+        # Force IPv4 only (AF_INET) for peer discovery to ensure reliability
+        infos = socket.getaddrinfo(settings.beacon_service_name, settings.app_port, family=socket.AF_INET)
         for info in infos:
             ip = info[4][0]
-            # Wrap IPv6 addresses in brackets for valid URL formatting
-            if ":" in ip:
-                ip = f"[{ip}]"
             urls.add(f"http://{ip}:{settings.app_port}")
     except socket.gaierror:
         # Not in a Docker network or service name not found
         pass
 
     # Don't monitor ourselves
+    global _cached_local_ip
     if _cached_local_ip is None:
         try:
-            # Get the primary local IP
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect((settings.local_ip_discovery_host, 80))
-            _cached_local_ip = s.getsockname()[0]
-            s.close()
-            logger.debug(f"Discovered local IP for exclusion: {_cached_local_ip}")
+            # Modern Python 3.12+ approach: Get all local interface IPs directly
+            # This is the programmatic equivalent of 'ip a'
+            _cached_local_ip = {
+                ifaddr.addr[0] for ifaddr in socket.getifaddrs() 
+                if ifaddr.addr and ifaddr.family in (socket.AF_INET, socket.AF_INET6)
+            }
+            logger.debug(f"Discovered local IPs for exclusion: {_cached_local_ip}")
         except Exception as e:
-            logger.warning(f"Could not discover local IP: {e}")
+            logger.warning(f"Could not discover local IPs: {e}")
+            _cached_local_ip = set()
 
     final_urls = []
     self_url = settings.beacon_instance_url.rstrip("/") if settings.beacon_instance_url else None
@@ -63,7 +64,7 @@ async def get_peer_urls():
     for url in urls:
         if self_url and url == self_url:
             continue
-        if _cached_local_ip and f"://{_cached_local_ip}:" in url:
+        if _cached_local_ip and any(f"://{ip}:" in url for ip in _cached_local_ip):
             continue
         final_urls.append(url)
     

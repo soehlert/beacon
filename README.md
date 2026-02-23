@@ -7,6 +7,7 @@ Project Beacon is a notification broker designed to centralize alerting across m
 - **Centralized Alerting**: Send a single request to Beacon to distribute notifications to various platforms.
 - **Modular Architecture**: The service is structured to support the addition of new notification providers.
 - **Standardized Schema**: Uses a consistent data structure for all endpoints, simplifying integration for external scripts and services.
+- **Infrastructure Peer Watcher**: Automatically discovers and monitors other Beacon instances in the network to ensure high availability.
 - **FastAPI Backend**: Built with FastAPI and containerized for consistent deployment.
 
 ## Supported Modules

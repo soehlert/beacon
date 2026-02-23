@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 _cached_local_ip = None
 # Global to track peers that have been verified as NOT ourselves
 _verified_peers = []
+# Global to track URLs that have been identified as ourselves
+_known_self_urls = set()
 
 
 class InternalAlert(BaseModel):
@@ -75,6 +77,10 @@ async def run_peer_watch():
                 peer_urls = await get_peer_urls()
             
             for url in peer_urls:
+                # 1. Skip if we already confirmed this URL is US
+                if url in _known_self_urls:
+                    continue
+
                 # Initialize state for any newly discovered peers
                 if url not in down_alert_sent:
                     down_alert_sent[url] = False
@@ -87,7 +93,8 @@ async def run_peer_watch():
                     # Identity-based self-exclusion: If the peer is US, skip monitoring it
                     peer_name = data.get("instance_name")
                     if peer_name == settings.beacon_instance_name:
-                        logger.debug(f"Peer Watcher: Skipping {url} (Self-discovery via name '{peer_name}')")
+                        logger.debug(f"Peer Watcher: Identified {url} as SELF. Caching and skipping.")
+                        _known_self_urls.add(url)
                         continue
                     
                     # If we reach here, it's a legitimate external peer

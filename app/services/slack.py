@@ -14,6 +14,10 @@ class SlackService:
 
     async def send_alert(self, payload):
         """Logic to send message to Slack via API."""
+        if not self.token or not self.channel_id:
+            logger.warning("Slack alert requested, but Slack token or channel ID is not configured.")
+            return {"status": "error", "message": "Slack not configured", "platform": "slack"}
+
         url = "https://slack.com/api/chat.postMessage"
         headers = {
             "Authorization": f"Bearer {self.token}",

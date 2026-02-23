@@ -17,9 +17,11 @@ class Settings(BaseSettings):
     app_port: int = 7867
     debug: bool = False
     heartbeat_url: str | None = None
-    heartbeat_interval: int = 900  # 15 minutes
+    heartbeat_interval: int = 900
+    
+    # Peer Monitoring (Watcher) - Infrastructure health checks
     peer_watch_urls: list[str] = []
-    peer_watch_interval: int = 300  # 5 minutes
+    peer_watch_interval: int = 300
     beacon_instance_url: str | None = None
     beacon_service_name: str = "beacon"
     local_ip_discovery_host: str = "8.8.8.8"

@@ -137,12 +137,32 @@ Beacon can automatically "check in" with an external monitoring service to ensur
 ### Peer Watcher (Internal Discovery)
 If running multiple instances, Beacon discovers peers via Docker DNS or `PEER_WATCH_URLS`.
 
-### Disabling Monitoring
-If you are running a single instance and do not wish to use heartbeat or peer monitoring:
-1. **In .env**: Comment out `HEARTBEAT_URL` and `PEER_WATCH_URLS`.
-2. **In Docker Compose/Portainer**: Delete the environment variable lines from your stack configuration.
-   - *Note: In some environments, setting them to an empty string (e.g., `PEER_WATCH_URLS=""`) may still be parsed. Deleting the line is the most reliable way to disable the feature.*
-3. Beacon will skip initialization of these background tasks on startup.
+## Environment Variables Reference & Optional Settings
+
+Beacon is built to be resilient. You can run the application with minimal configuration, and unconfigured modules will simply gracefully skip or return an error without crashing the application.
+
+### Disabling Modules
+
+You can disable specific modules by commenting out their variables or explicitly leaving them blank.
+
+1. **Slack (`SLACK_BOT_TOKEN`, `SLACK_CHANNEL_ID`)**
+   - **If blank**: Any incoming `POST /slack/alert` requests will be gracefully rejected with a "Slack not configured" message. Beacon will not crash.
+2. **Home Assistant (`HA_URL`, `HA_TOKEN`, `HA_WEBHOOK_ID`)**
+   - **If blank**: Home Assistant integration is disabled. Incoming requests will fail gracefully.
+3. **Heartbeat Monitoring (`HEARTBEAT_URL`)**
+   - **If blank**: Beacon will skip initializing the background heartbeat task. It will not ping external services (like uptimerobot) on a schedule. You can set it to `HEARTBEAT_URL=` in `.env`.
+4. **Peer Monitoring (`PEER_WATCH_URLS`, `BEACON_SERVICE_NAME`)**
+   - **If both are blank**: Beacon will not monitor external peer instances and will not query Docker DNS for internal replicas. The peer watcher background task will be disabled entirely.
+   - **`BEACON_SERVICE_NAME`**: Defaults to `beacon`. If left blank (`BEACON_SERVICE_NAME=`), Beacon will skip querying Docker's internal DNS resolver to automatically find swarm/compose siblings.
+   - **How to pass a blank list**: Because Beacon uses strict JSON-based parsing for lists, you **must** use valid JSON array syntax to pass an empty list if you choose to define it:
+     ```env
+     PEER_WATCH_URLS='[]'
+     ```
+     Alternatively, you can safely completely delete or comment out the line in the `.env` file, and Beacon will default to an empty list `[]` automatically.
+5. **Peer Filtering (`BEACON_INSTANCE_URL`, `LOCAL_IP_DISCOVERY_HOST`)**
+   - These are optional helper variables used by the Peer Watcher to prevent Beacon from accidentally "monitoring" itself when scaling horizontally.
+   - **If `BEACON_INSTANCE_URL` is blank**: Beacon will attempt to automatically discover its own IP using the `LOCAL_IP_DISCOVERY_HOST` (default `8.8.8.8`) and aggressively filter itself out of the aggregated peer list so it doesn't alert if it goes down.
+   - **If `LOCAL_IP_DISCOVERY_HOST` is blank**: Beacon will skip the automatic IP lookup fallback.
 
 ---
 

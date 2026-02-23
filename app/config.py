@@ -25,7 +25,6 @@ class Settings(BaseSettings):
     beacon_instance_name: str = "beacon"
     beacon_instance_url: str | None = None
     beacon_service_name: str = "beacon"
-    local_ip_discovery_host: str = "8.8.8.8"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

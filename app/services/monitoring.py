@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 # Global cache to avoid repetitive socket/DNS lookups
 _cached_local_ip = None
 # Global to track peers that have been verified as NOT ourselves
-_verified_peers = []
+_verified_peers = set()
 # Global to track URLs that have been identified as ourselves
 _known_self_urls = set()
 
@@ -52,7 +52,7 @@ async def get_peer_urls():
 
 async def get_verified_peers():
     """Return the list of peers verified as external instances."""
-    return _verified_peers
+    return list(_verified_peers)
 
 async def run_peer_watch():
     """Background task to monitor peer Beacon instances."""
@@ -68,10 +68,9 @@ async def run_peer_watch():
 
     iteration = 0
     peer_urls = []
-    current_pass_verified = []
-
     async with httpx.AsyncClient(timeout=10.0) as client:
         while True:
+            current_pass_verified = set()
             # Re-discover peers every 10 iterations
             if iteration % 10 == 0:
                 peer_urls = await get_peer_urls()
@@ -98,7 +97,7 @@ async def run_peer_watch():
                         continue
                     
                     # If we reach here, it's a legitimate external peer
-                    current_pass_verified.append(url)
+                    current_pass_verified.add(url)
                     is_healthy = True
                 except Exception as e:
                     logger.debug(f"Peer Watcher: Health check failed for {url}: {e}")

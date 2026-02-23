@@ -37,6 +37,9 @@ async def get_peer_urls():
         infos = socket.getaddrinfo(settings.beacon_service_name, settings.app_port)
         for info in infos:
             ip = info[4][0]
+            # Wrap IPv6 addresses in brackets for valid URL formatting
+            if ":" in ip:
+                ip = f"[{ip}]"
             urls.add(f"http://{ip}:{settings.app_port}")
     except socket.gaierror:
         # Not in a Docker network or service name not found
@@ -77,6 +80,9 @@ async def run_peer_watch():
 
     iteration = 0
     peer_urls = []
+
+    # Startup grace period to allow network/peers to stabilize
+    await asyncio.sleep(10)
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         while True:

@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 # Global cache to avoid repetitive socket/DNS lookups
 _cached_local_ip = None
+# Global to track peers that have been verified as NOT ourselves
+_verified_peers = []
 
 
 class InternalAlert(BaseModel):
@@ -45,6 +47,11 @@ async def get_peer_urls():
 
     return list(urls)
 
+
+async def get_verified_peers():
+    """Return the list of peers verified as external instances."""
+    return _verified_peers
+
 async def run_peer_watch():
     """Background task to monitor peer Beacon instances."""
     # Tracking state of peers to ensure we only send one alert per status change.
@@ -59,6 +66,7 @@ async def run_peer_watch():
 
     iteration = 0
     peer_urls = []
+    current_pass_verified = []
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         while True:
@@ -81,7 +89,9 @@ async def run_peer_watch():
                     if peer_name == settings.beacon_instance_name:
                         logger.debug(f"Peer Watcher: Skipping {url} (Self-discovery via name '{peer_name}')")
                         continue
-                        
+                    
+                    # If we reach here, it's a legitimate external peer
+                    current_pass_verified.append(url)
                     is_healthy = True
                 except Exception as e:
                     logger.debug(f"Peer Watcher: Health check failed for {url}: {e}")
@@ -114,4 +124,9 @@ async def run_peer_watch():
                     down_alert_sent[url] = False
 
             iteration += 1
+            
+            # Update the global verified list after each pass
+            global _verified_peers
+            _verified_peers = current_pass_verified
+            
             await asyncio.sleep(settings.peer_watch_interval)

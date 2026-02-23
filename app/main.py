@@ -71,8 +71,8 @@ app.include_router(homeassistant.router, prefix="/homeassistant", tags=["Home As
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    # We call this to get the current list from the internal cache
-    discovered = await get_peer_urls()
+    # Only show external peers that have been identity-verified
+    discovered = await get_verified_peers()
     
     status = {
         "instance_name": settings.beacon_instance_name,

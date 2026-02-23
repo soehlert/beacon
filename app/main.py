@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from app.routes import slack, homeassistant
 from app.config import settings
-from app.services.monitoring import run_peer_watch, get_peer_urls
+from app.services.monitoring import run_peer_watch, get_peer_urls, get_verified_peers
 
 # Configure logging
 logging.basicConfig(

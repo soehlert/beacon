@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     # Peer Monitoring (Watcher) - Infrastructure health checks
     peer_watch_urls: list[str] = []
     peer_watch_interval: int = 300
+    beacon_instance_name: str = "beacon"
     beacon_instance_url: str | None = None
     beacon_service_name: str = "beacon"
     local_ip_discovery_host: str = "8.8.8.8"

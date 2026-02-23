@@ -43,47 +43,22 @@ async def get_peer_urls():
         # Not in a Docker network or service name not found
         pass
 
-    # Don't monitor ourselves
-    global _cached_local_ip
-    if _cached_local_ip is None:
-        try:
-            # Modern Python 3.12+ approach: Get all local interface IPs directly
-            # This is the programmatic equivalent of 'ip a'
-            _cached_local_ip = {
-                ifaddr.addr[0] for ifaddr in socket.getifaddrs() 
-                if ifaddr.addr and ifaddr.family in (socket.AF_INET, socket.AF_INET6)
-            }
-            logger.debug(f"Discovered local IPs for exclusion: {_cached_local_ip}")
-        except Exception as e:
-            logger.warning(f"Could not discover local IPs: {e}")
-            _cached_local_ip = set()
-
-    final_urls = []
-    self_url = settings.beacon_instance_url.rstrip("/") if settings.beacon_instance_url else None
-    
-    for url in urls:
-        if self_url and url == self_url:
-            continue
-        if _cached_local_ip and any(f"://{ip}:" in url for ip in _cached_local_ip):
-            continue
-        final_urls.append(url)
-    
-    return final_urls
+    return list(urls)
 
 async def run_peer_watch():
     """Background task to monitor peer Beacon instances."""
     # Tracking state of peers to ensure we only send one alert per status change.
-    # down_alert_sent[url] = True means the peer is currently down and we've already notified the user.
     down_alert_sent = {}
     
     slack = SlackService()
     ha = HomeAssistantService()
 
+    logger.info("Peer Watcher: Starting in 30 seconds to allow network stabilization...")
+    await asyncio.sleep(30)
+    logger.info("Peer Watcher: Starting monitoring loop.")
+
     iteration = 0
     peer_urls = []
-
-    # Startup grace period to allow network/peers to stabilize
-    await asyncio.sleep(10)
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         while True:
@@ -98,8 +73,18 @@ async def run_peer_watch():
 
                 try:
                     response = await client.get(url + "/health")
-                    is_healthy = response.status_code == 200
-                except Exception:
+                    response.raise_for_status()
+                    data = response.json()
+                    
+                    # Identity-based self-exclusion: If the peer is US, skip monitoring it
+                    peer_name = data.get("instance_name")
+                    if peer_name == settings.beacon_instance_name:
+                        logger.debug(f"Peer Watcher: Skipping {url} (Self-discovery via name '{peer_name}')")
+                        continue
+                        
+                    is_healthy = True
+                except Exception as e:
+                    logger.debug(f"Peer Watcher: Health check failed for {url}: {e}")
                     is_healthy = False
 
                 # Peer just went down

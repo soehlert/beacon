@@ -75,6 +75,7 @@ async def health_check():
     discovered = await get_peer_urls()
     
     status = {
+        "instance_name": settings.beacon_instance_name,
         "app": "healthy",
         "modules": {
             "slack": "configured" if settings.slack_bot_token else "missing_credentials",
